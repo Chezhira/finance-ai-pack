@@ -1,0 +1,11 @@
+default_mode: fixture_only
+multi_bank_default: true
+banks:
+  - code: nmb_tzs
+    display_name: NMB TZS
+    currency: TZS
+    source: fixtures/odoo_statement_lines/nmb_tzs_2025-01.json
+  - code: nbc_usd
+    display_name: NBC USD
+    currency: USD
+    source: fixtures/odoo_statement_lines/nbc_usd_2025-01.json

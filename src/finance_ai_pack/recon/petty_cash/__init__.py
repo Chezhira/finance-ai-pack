@@ -1,0 +1,1 @@
+"""Petty cash placeholder module."""

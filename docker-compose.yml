@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: finance_ai_pack
+      POSTGRES_USER: finance_ai_pack
+      POSTGRES_PASSWORD: finance_ai_pack
+    ports:
+      - "5432:5432"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app
+    volumes:
+      - ./:/app
+    env_file:
+      - .env
+    command: ["sleep", "infinity"]
+    depends_on:
+      - db
