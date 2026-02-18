@@ -14,7 +14,7 @@ def test_cli_bank_command_payload():
 
 
 def test_cli_vat_command_payload():
-    payload = run_vat_pack("2025-01")
+    payload = run_vat_pack(period_from="2025-01")
     assert payload["command"] == "vat_pack"
     assert payload["mode"] == "fixture-only"
 

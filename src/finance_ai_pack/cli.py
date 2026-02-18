@@ -8,6 +8,7 @@ import re
 from finance_ai_pack.config import Settings
 from finance_ai_pack.outputs.writers import write_csv, write_html, write_json, write_xlsx
 from finance_ai_pack.recon.bank.service import reconcile as bank_reconcile
+from finance_ai_pack.recon.vat.service import reconcile_vat
 from finance_ai_pack.rules.month_end_gating import can_proceed, evaluate
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -71,25 +72,77 @@ def run_bank_recon(period: str, settings: Settings | None = None) -> dict:
     return result
 
 
-def run_vat_pack(period: str) -> dict:
-    validate_period(period)
-    return {
-        "command": "vat_pack",
-        "period": period,
-        "mode": "fixture-only",
-        "auto_posting": False,
-        "status": "proposal-generated",
+def run_vat_pack(
+    period_from: str,
+    period_to: str | None = None,
+    settings: Settings | None = None,
+    tra_file: Path | None = None,
+) -> dict:
+    validate_period(period_from)
+    period_to = period_to or period_from
+    validate_period(period_to)
+    settings = settings or Settings.from_env()
+
+    result = reconcile_vat(
+        period_from=period_from,
+        period_to=period_to,
+        fixtures_dir=FIXTURES,
+        settings=settings,
+        tra_file=tra_file,
+    )
+
+    prefix = OUTPUTS_DIR / "vat_monthly_summary"
+    write_json({"monthly_summary": result["monthly_summary"]}, prefix.with_suffix(".json"))
+    write_csv(result["monthly_summary"], prefix.with_suffix(".csv"))
+    write_xlsx(result["monthly_summary"], prefix.with_suffix(".xlsx"))
+
+    exceptions_prefix = OUTPUTS_DIR / "vat_exception_register"
+    write_json({"exception_register": result["exception_register"]}, exceptions_prefix.with_suffix(".json"))
+    write_csv(result["exception_register"], exceptions_prefix.with_suffix(".csv"))
+    write_xlsx(result["exception_register"], exceptions_prefix.with_suffix(".xlsx"))
+
+    report_file = OUTPUTS_DIR / "vat_pack_report.html"
+    write_html(
+        title=f"VAT Pack {period_from} to {period_to}",
+        sections={
+            "Narrative": {"text": result["narrative"]},
+            "Monthly Summary": result["monthly_summary"],
+            "Exception Register": result["exception_register"],
+        },
+        output_file=report_file,
+    )
+
+    result["artifacts"] = {
+        "vat_monthly_summary_json": str(prefix.with_suffix(".json")),
+        "vat_monthly_summary_csv": str(prefix.with_suffix(".csv")),
+        "vat_monthly_summary_xlsx": str(prefix.with_suffix(".xlsx")),
+        "vat_exception_register_json": str(exceptions_prefix.with_suffix(".json")),
+        "vat_exception_register_csv": str(exceptions_prefix.with_suffix(".csv")),
+        "vat_exception_register_xlsx": str(exceptions_prefix.with_suffix(".xlsx")),
+        "vat_pack_report_html": str(report_file),
     }
+    return result
 
 
-def run_month_end(period: str, settings: Settings | None = None) -> dict:
+def run_month_end(period: str, settings: Settings | None = None, tra_file: Path | None = None) -> dict:
     validate_period(period)
     settings = settings or Settings.from_env()
     bank = run_bank_recon(period, settings=settings)
+    vat = run_vat_pack(period_from=period, period_to=period, settings=settings, tra_file=tra_file)
+
     rollup = bank["bank_controls_rollup"]
     unmatched_transactions = rollup["total_statement_lines"] - rollup["total_reconciled_lines"]
     unexplained_amount = float(sum(abs(b["tie_out"]["difference"]) for b in bank["banks"]))
-    status = evaluate(unmatched_transactions=unmatched_transactions, unexplained_amount=unexplained_amount)
+    vat_monthly_differences = [
+        max(abs(float(row["input_difference"])), abs(float(row["output_difference"])))
+        for row in vat["monthly_summary"]
+    ]
+
+    status = evaluate(
+        unmatched_transactions=unmatched_transactions,
+        unexplained_amount=unexplained_amount,
+        vat_monthly_differences=vat_monthly_differences,
+    )
     proceed = can_proceed(status=status, overrides_file=OVERRIDES_FILE)
     return {
         "command": "month_end",
@@ -99,6 +152,11 @@ def run_month_end(period: str, settings: Settings | None = None) -> dict:
         "status": status,
         "proceed": proceed,
         "bank_controls_rollup": rollup,
+        "vat_controls_rollup": {
+            "months": len(vat["monthly_summary"]),
+            "max_abs_vat_difference": max(vat_monthly_differences) if vat_monthly_differences else 0.0,
+            "exception_count": len(vat["exception_register"]),
+        },
     }
 
 
@@ -108,18 +166,35 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="run")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    for cmd in ("bank_recon", "vat_pack", "month_end"):
-        sub = subparsers.add_parser(cmd)
-        sub.add_argument("--period", required=True)
+    bank_sub = subparsers.add_parser("bank_recon")
+    bank_sub.add_argument("--period", required=True)
+
+    vat_sub = subparsers.add_parser("vat_pack")
+    vat_sub.add_argument("--period_from", required=True)
+    vat_sub.add_argument("--period_to")
+    vat_sub.add_argument("--tra_file")
+
+    month_end_sub = subparsers.add_parser("month_end")
+    month_end_sub.add_argument("--period", required=True)
+    month_end_sub.add_argument("--tra_file")
 
     args = parser.parse_args()
 
     if args.command == "bank_recon":
         payload = run_bank_recon(args.period, settings=settings)
     elif args.command == "vat_pack":
-        payload = run_vat_pack(args.period)
+        payload = run_vat_pack(
+            period_from=args.period_from,
+            period_to=args.period_to,
+            settings=settings,
+            tra_file=Path(args.tra_file) if args.tra_file else None,
+        )
     else:
-        payload = run_month_end(args.period, settings=settings)
+        payload = run_month_end(
+            args.period,
+            settings=settings,
+            tra_file=Path(args.tra_file) if args.tra_file else None,
+        )
 
     print(json.dumps(payload, indent=2))
     print("no auto-posting performed")

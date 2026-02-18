@@ -1,4 +1,5 @@
 PERIOD ?= 2025-01
+TRA_FILE ?= fixtures/vat/tra_vat_2025-01.csv
 
 .PHONY: up down test lint run-bank run-vat run-month-end
 
@@ -19,7 +20,7 @@ run-bank:
 	PYTHONPATH=src python -m finance_ai_pack.cli bank_recon --period $(PERIOD)
 
 run-vat:
-	PYTHONPATH=src python -m finance_ai_pack.cli vat_pack --period $(PERIOD)
+	PYTHONPATH=src python -m finance_ai_pack.cli vat_pack --period_from $(PERIOD) --period_to $(PERIOD) --tra_file $(TRA_FILE)
 
 run-month-end:
 	PYTHONPATH=src python -m finance_ai_pack.cli month_end --period $(PERIOD)

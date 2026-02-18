@@ -50,3 +50,37 @@ class FixturesAdapter:
         _ = period
         _ = journal
         return 0.0
+
+    def get_vat_tax_lines(self, period: str, vat_type: str) -> list[dict]:
+        fixture_file = self.fixtures_dir / "vat" / f"odoo_vat_lines_{period}.json"
+        if not fixture_file.exists():
+            return []
+        rows = json.loads(fixture_file.read_text())
+        return [
+            {
+                "period": period,
+                "tax_type": row.get("tax_type", ""),
+                "vat_amount": float(row.get("vat_amount", 0.0)),
+                "document_ref": row.get("document_ref", ""),
+                "move_type": row.get("move_type", ""),
+                "source_period": row.get("source_period", period),
+                "exception_hint": row.get("exception_hint", ""),
+                "notes": row.get("notes", ""),
+            }
+            for row in rows
+            if row.get("tax_type") == vat_type
+        ]
+
+    def get_vat_control_balance(self, period: str) -> dict:
+        lines = [
+            *self.get_vat_tax_lines(period=period, vat_type="input"),
+            *self.get_vat_tax_lines(period=period, vat_type="output"),
+        ]
+        closing_balance = sum(float(row.get("vat_amount", 0.0)) for row in lines)
+        return {
+            "opening_balance": 0.0,
+            "debits": round(sum(float(r.get("vat_amount", 0.0)) for r in lines if float(r.get("vat_amount", 0.0)) < 0), 2),
+            "credits": round(sum(float(r.get("vat_amount", 0.0)) for r in lines if float(r.get("vat_amount", 0.0)) >= 0), 2),
+            "closing_balance": round(closing_balance, 2),
+            "assumption": "Fixture tie-out approximates VAT control using summed VAT tax lines only.",
+        }
