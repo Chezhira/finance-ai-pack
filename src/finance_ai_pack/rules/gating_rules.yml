@@ -1,0 +1,19 @@
+version: v1
+mode: fixture_only
+thresholds:
+  green:
+    max_unmatched_transactions: 0
+    max_unexplained_amount: 0
+  amber:
+    max_unmatched_transactions: 5
+    max_unexplained_amount: 1000
+  red:
+    min_unmatched_transactions: 6
+    min_unexplained_amount: 1000.01
+override:
+  red_blocking: true
+  require_recorded_override: true
+  required_fields:
+    - approver
+    - reason
+    - timestamp
