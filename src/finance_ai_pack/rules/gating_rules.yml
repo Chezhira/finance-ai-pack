@@ -4,12 +4,11 @@ thresholds:
   green:
     max_unmatched_transactions: 0
     max_unexplained_amount: 0
+    max_vat_monthly_difference: 0
   amber:
     max_unmatched_transactions: 5
     max_unexplained_amount: 1000
-  red:
-    min_unmatched_transactions: 6
-    min_unexplained_amount: 1000.01
+    max_vat_monthly_difference: 250
 override:
   red_blocking: true
   require_recorded_override: true

@@ -1,0 +1,47 @@
+[
+  {
+    "tax_type": "input",
+    "vat_amount": 1200.00,
+    "document_ref": "BILL-1001",
+    "move_type": "in_invoice",
+    "source_period": "2025-01",
+    "exception_hint": "",
+    "notes": "Posted in January"
+  },
+  {
+    "tax_type": "input",
+    "vat_amount": 300.00,
+    "document_ref": "",
+    "move_type": "in_invoice",
+    "source_period": "2025-01",
+    "exception_hint": "missing",
+    "notes": "Supplier bill missing reference"
+  },
+  {
+    "tax_type": "input",
+    "vat_amount": 200.00,
+    "document_ref": "BILL-DEC-009",
+    "move_type": "in_invoice",
+    "source_period": "2024-12",
+    "exception_hint": "timing",
+    "notes": "Late posting"
+  },
+  {
+    "tax_type": "output",
+    "vat_amount": 1800.00,
+    "document_ref": "INV-2101",
+    "move_type": "out_invoice",
+    "source_period": "2025-01",
+    "exception_hint": "",
+    "notes": "Normal output VAT"
+  },
+  {
+    "tax_type": "output",
+    "vat_amount": -150.00,
+    "document_ref": "CN-2101",
+    "move_type": "out_refund",
+    "source_period": "2025-01",
+    "exception_hint": "credit",
+    "notes": "Credit note reversal"
+  }
+]

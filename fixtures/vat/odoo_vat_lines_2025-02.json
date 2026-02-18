@@ -1,0 +1,20 @@
+[
+  {
+    "tax_type": "input",
+    "vat_amount": 1300.00,
+    "document_ref": "BILL-1101",
+    "move_type": "in_invoice",
+    "source_period": "2025-02",
+    "exception_hint": "",
+    "notes": "Posted in February"
+  },
+  {
+    "tax_type": "output",
+    "vat_amount": 1700.00,
+    "document_ref": "INV-2201",
+    "move_type": "out_invoice",
+    "source_period": "2025-02",
+    "exception_hint": "",
+    "notes": "Normal output VAT"
+  }
+]
