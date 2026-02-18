@@ -133,7 +133,10 @@ def run_month_end(period: str, settings: Settings | None = None, tra_file: Path 
     rollup = bank["bank_controls_rollup"]
     unmatched_transactions = rollup["total_statement_lines"] - rollup["total_reconciled_lines"]
     unexplained_amount = float(sum(abs(b["tie_out"]["difference"]) for b in bank["banks"]))
-    vat_monthly_differences = [abs(float(row["net_vat_difference"])) for row in vat["monthly_summary"]]
+    vat_monthly_differences = [
+        max(abs(float(row["input_difference"])), abs(float(row["output_difference"])))
+        for row in vat["monthly_summary"]
+    ]
 
     status = evaluate(
         unmatched_transactions=unmatched_transactions,
@@ -151,7 +154,7 @@ def run_month_end(period: str, settings: Settings | None = None, tra_file: Path 
         "bank_controls_rollup": rollup,
         "vat_controls_rollup": {
             "months": len(vat["monthly_summary"]),
-            "max_abs_net_vat_difference": max(vat_monthly_differences) if vat_monthly_differences else 0.0,
+            "max_abs_vat_difference": max(vat_monthly_differences) if vat_monthly_differences else 0.0,
             "exception_count": len(vat["exception_register"]),
         },
     }

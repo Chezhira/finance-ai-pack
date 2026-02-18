@@ -25,7 +25,7 @@ Scaffold for month-end automation, VAT pack support, and multi-bank reconciliati
 2. Start services: `make up`
 3. Run commands:
    - `make run-bank PERIOD=2025-01`
-   - `make run-vat PERIOD=2025-01`
+   - `make run-vat PERIOD=2025-01 TRA_FILE=fixtures/vat/tra_vat_2025-01.csv`
    - `make run-month-end PERIOD=2025-01`
 4. Run tests: `make test`
 5. Stop services: `make down`
@@ -40,6 +40,11 @@ PYTHONPATH=src python -m finance_ai_pack.cli vat_pack \
   --period_from 2025-01 \
   --period_to 2025-02 \
   --tra_file fixtures/vat/tra_vat_2025-01.csv  # or .xlsx
+```
+
+Makefile shortcut (with configurable TRA path):
+```bash
+make run-vat PERIOD=2025-02 TRA_FILE=fixtures/vat/tra_vat_2025-01.csv
 ```
 
 Sample TRA file template (primary):
