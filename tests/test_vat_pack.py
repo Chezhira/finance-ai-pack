@@ -1,5 +1,6 @@
-import pytest
 from pathlib import Path
+
+import pytest
 
 from finance_ai_pack.cli import run_month_end, run_vat_pack
 from finance_ai_pack.recon.vat.service import read_tra_file

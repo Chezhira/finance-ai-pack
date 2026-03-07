@@ -1,118 +1,165 @@
-# Finance AI Pack (Odoo 18-first)
+# Finance AI Pack — Odoo 18 Month-End Automation
 
-Scaffold for month-end automation, VAT pack support, and multi-bank reconciliation checks.
+Month-end close on a multi-entity Odoo 18 instance means chasing the same three questions every period: *are all bank lines matched, does our VAT position agree with TRA, and can we proceed to reporting?* This repo automates those checks into a single CLI with deterministic, auditable outputs — no auto-posting, no secrets committed, fixture-first by default.
 
-## Principles
-- Fixture-only mode by default (no live Odoo creds required).
-- No PDF parsing in v1 (use Odoo statement lines / fixtures).
-- No auto-posting to Odoo (proposal outputs and exceptions only).
-- No secrets committed; use environment variables for all live credentials.
+---
 
-## Repo Structure
-- `src/finance_ai_pack/connectors/odoo`
-- `src/finance_ai_pack/recon/bank`
-- `src/finance_ai_pack/recon/vat`
-- `src/finance_ai_pack/recon/ledger`
-- `src/finance_ai_pack/recon/petty_cash`
-- `src/finance_ai_pack/rules`
-- `src/finance_ai_pack/outputs`
-- `src/finance_ai_pack/cli.py`
-- `tests/`
-- `docs/`
+## What it does
 
-## Quickstart
-1. Copy `.env.example` to `.env`.
-2. Start services: `make up`
-3. Run commands:
-   - `make run-bank PERIOD=2025-01`
-   - `make run-vat PERIOD=2025-01 TRA_FILE=fixtures/vat/tra_vat_2025-01.csv`
-   - `make run-month-end PERIOD=2025-01`
-4. Run tests: `make test`
-5. Stop services: `make down`
+| Command | What runs |
+|---|---|
+| `run bank_recon --period YYYY-MM` | Discovers bank journals → fetches statement lines → reconciles → aging buckets → tie-out vs ledger → artifacts |
+| `run vat_pack --period_from YYYY-MM` | Loads Odoo VAT tax lines + TRA CSV/XLSX → monthly difference → exception register by category → HTML narrative |
+| `run month_end --period YYYY-MM` | Runs both above → evaluates GREEN / AMBER / RED gating → checks for CFO override → final proceed decision |
 
-## How to run VAT pack
+**Outputs per command:** JSON · CSV · XLSX · HTML — written to `outputs/`, gitignored.
 
-### Fixture mode (offline)
-Uses local fixtures only.
+---
 
-```bash
-PYTHONPATH=src python -m finance_ai_pack.cli vat_pack \
-  --period_from 2025-01 \
-  --period_to 2025-02 \
-  --tra_file fixtures/vat/tra_vat_2025-01.csv  # or .xlsx
+## Architecture
+
+```
+finance-ai-pack/
+├── src/finance_ai_pack/
+│   ├── cli.py                    # argparse entrypoint → run bank_recon / vat_pack / month_end
+│   ├── config.py                 # Settings dataclass, FIXTURE_MODE env switch
+│   ├── connectors/odoo/
+│   │   ├── client.py             # XML-RPC client with typed error mapping
+│   │   ├── fixtures_adapter.py   # Offline adapter — reads from fixtures/
+│   │   └── live_adapter.py       # Live adapter — queries Odoo 18 via XML-RPC
+│   ├── recon/
+│   │   ├── bank/service.py       # Bank reconciliation engine
+│   │   ├── vat/service.py        # VAT reconciliation + TRA import (CSV & XLSX)
+│   │   ├── ledger/service.py     # Scaffold
+│   │   └── petty_cash/service.py # Scaffold
+│   ├── rules/
+│   │   ├── month_end_gating.py   # GREEN / AMBER / RED threshold evaluator
+│   │   ├── gating_rules.yml      # Configurable thresholds
+│   │   └── bank_registry.yml     # Journal name → display name / currency mapping
+│   └── outputs/writers.py        # JSON / CSV / XLSX / HTML writers (zero extra deps)
+├── fixtures/
+│   ├── odoo_statement_lines/     # banks.json + per-bank per-period line fixtures
+│   ├── vat/                      # TRA templates + Odoo VAT line fixtures
+│   └── overrides/                # Month-end RED override approvals
+└── tests/                        # 20 unit tests, 1 live integration (opt-in)
 ```
 
-Makefile shortcut (with configurable TRA path):
+---
+
+## Quickstart (fixture mode — no Odoo required)
+
 ```bash
-make run-vat PERIOD=2025-02 TRA_FILE=fixtures/vat/tra_vat_2025-01.csv
+git clone https://github.com/Chezhira/finance-ai-pack.git
+cd finance-ai-pack
+pip install -e .
+
+# Bank reconciliation
+run bank_recon --period 2025-01
+
+# VAT pack — single month
+run vat_pack --period_from 2025-01
+
+# VAT pack — date range with custom TRA file
+run vat_pack --period_from 2025-01 --period_to 2025-03 \
+  --tra_file fixtures/vat/tra_vat_2025-01.csv
+
+# Full month-end gating check
+run month_end --period 2025-01
 ```
 
-Sample TRA file template (primary):
-- `fixtures/vat/tra_template.csv`
-- Optional Excel format is also supported for import (`.xlsx`).
-- Required columns:
-  - `period` (YYYY-MM)
-  - `input_vat` (numeric)
-  - `output_vat` (numeric)
-
-### Live Odoo mode
+Or via Docker:
 
 ```bash
-export FIXTURE_MODE=false
-PYTHONPATH=src python -m finance_ai_pack.cli vat_pack \
-  --period_from 2025-01 \
-  --period_to 2025-02 \
-  --tra_file path/to/tra_file.csv  # or path/to/tra_file.xlsx
+cp .env.example .env
+make up
+make run-bank PERIOD=2025-01
+make run-vat PERIOD=2025-01 TRA_FILE=fixtures/vat/tra_vat_2025-01.csv
+make run-month-end PERIOD=2025-01
+make down
+```
+
+---
+
+## Live Odoo mode (AWS-hosted Odoo 18)
+
+Fixture mode is the default. To connect to a live instance:
+
+```bash
+cp .env.example .env
+# Edit .env:
+# FIXTURE_MODE=false
+# ODOO_URL=https://your-odoo.example.com
+# ODOO_DB=your_db
+# ODOO_USERNAME=admin
+# ODOO_PASSWORD=your_password
+
+make run-bank PERIOD=2025-01
 ```
 
 Live mode notes:
-- VAT extraction is best-effort from posted Odoo tax lines.
-- VAT control tie-out is best-effort when dedicated control account mapping is unavailable.
+- Authentication is XML-RPC username/password only.
+- VAT extraction reads posted `account.move.line` records filtered by `tax_line_id.type_tax_use`.
+- VAT control tie-out is best-effort when no dedicated control account mapping is available.
 - No auto-posting in this release.
 - No PDF parsing in this release.
 
-## VAT artifacts
-Running `vat_pack` generates:
-- `outputs/vat_monthly_summary.json|csv|xlsx`
-- `outputs/vat_exception_register.json|csv|xlsx`
-- `outputs/vat_pack_report.html`
+---
 
-Monthly summary includes:
-- Odoo Input VAT, TRA Input VAT, Difference
-- Odoo Output VAT, TRA Output VAT, Difference
-- Net VAT difference
+## Month-end gating
 
-Exception register categories include:
-- timing/posting period
-- missing documents
-- wrong tax tags
-- credit notes/reversals
-- FX rounding
+The `month_end` command evaluates three signals against configurable thresholds in `rules/gating_rules.yml`:
 
-## Live Odoo mode (AWS-hosted Odoo 18)
-Fixture mode remains the default. To opt into live Odoo:
+| Signal | GREEN | AMBER | RED |
+|---|---|---|---|
+| Unmatched bank lines | 0 | ≤ 5 | > 5 |
+| Unexplained amount | 0 | ≤ 1,000 | > 1,000 |
+| Max VAT monthly difference | 0 | ≤ 250 | > 250 |
 
-1. Copy `.env.example` to `.env`.
-2. Set `FIXTURE_MODE=false`.
-3. Populate:
-   - `ODOO_URL`
-   - `ODOO_DB`
-   - `ODOO_USERNAME` (or `ODOO_USER` alias)
-   - `ODOO_PASSWORD`
-4. Run: `make run-bank PERIOD=YYYY-MM`
+A **RED** status blocks proceed unless a manual override exists in `fixtures/overrides/month_end_overrides.json` with an approver name.
 
-Notes:
-- Live integration uses XML-RPC username/password auth only.
-- Integration tests are opt-in and only run when both `LIVE_ODOO=1` and `FIXTURE_MODE=false`.
-- CI should keep fixture defaults and never run live tests by default.
-- No PDF parsing in this release.
-- No auto-posting in this release.
+---
 
-## Config
-- Bank registry: `src/finance_ai_pack/rules/bank_registry.yml`
-- Gating rules: `src/finance_ai_pack/rules/gating_rules.yml`
+## VAT pack outputs
 
-## Outputs
-`outputs/` is intentionally gitignored for generated artifacts; `.gitkeep` ensures the folder exists.
-Bank reconciliation now writes JSON, CSV, XLSX, and HTML artifacts, plus `bank_controls_rollup` for month-end gating input.
-VAT reconciliation writes monthly summaries, exception registers, and an HTML narrative report.
+Running `run vat_pack` generates:
+
+- `outputs/vat_monthly_summary.{json,csv,xlsx}` — per-period Odoo vs TRA with input/output differences
+- `outputs/vat_exception_register.{json,csv,xlsx}` — categorised exceptions: timing/posting period · missing documents · wrong tax tags · credit notes/reversals · FX rounding
+- `outputs/vat_pack_report.html` — narrative + summary tables
+
+### TRA file format
+
+```csv
+period,input_vat,output_vat
+2025-01,1600.00,1450.00
+2025-02,1700.00,1680.00
+```
+
+Both `.csv` and `.xlsx` are accepted. Column names must be exactly `period`, `input_vat`, `output_vat`.
+
+---
+
+## Running tests
+
+```bash
+pip install pytest openpyxl
+pytest -v
+```
+
+The live integration test (`test_live_odoo_integration.py`) is skipped unless both `LIVE_ODOO=1` and `FIXTURE_MODE=false` are set.
+
+---
+
+## Principles
+
+- **Fixture-first** — all commands run offline by default; no Odoo credentials required.
+- **Proposal outputs only** — generates exception registers and tie-out reports; never posts to Odoo.
+- **No secrets committed** — all live credentials via environment variables; `.env` is gitignored.
+- **Deterministic** — same fixtures always produce the same outputs; safe to run in CI.
+
+---
+
+## Author
+
+**Zahidah Murira** · Finance Lead · CMA · CGBA · CFA Level I
+[github.com/Chezhira](https://github.com/Chezhira)

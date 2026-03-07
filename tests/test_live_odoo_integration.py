@@ -6,7 +6,6 @@ import pytest
 from finance_ai_pack.config import Settings
 from finance_ai_pack.recon.bank.service import reconcile
 
-
 requires_live = pytest.mark.skipif(
     not (os.getenv("LIVE_ODOO") == "1" and os.getenv("FIXTURE_MODE", "true").lower() == "false"),
     reason="Live Odoo integration tests are opt-in only (LIVE_ODOO=1 and FIXTURE_MODE=false).",

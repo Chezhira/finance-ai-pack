@@ -40,9 +40,7 @@ class OdooClient:
             if not value
         ]
         if missing:
-            raise OdooConnectionError(
-                f"Missing live Odoo configuration: {', '.join(sorted(missing))}"
-            )
+            raise OdooConnectionError(f"Missing live Odoo configuration: {', '.join(sorted(missing))}")
 
     def connect(self) -> None:
         if self._uid is not None and self._models is not None:
@@ -53,9 +51,7 @@ class OdooClient:
         try:
             parsed = urlparse(base_url)
             if not parsed.scheme or not parsed.netloc:
-                raise OdooConnectionError(
-                    "ODOO_URL must include scheme and host, e.g. https://odoo.example.com"
-                )
+                raise OdooConnectionError("ODOO_URL must include scheme and host, e.g. https://odoo.example.com")
 
             common = ServerProxy(f"{base_url}/xmlrpc/2/common", allow_none=True)
             models = ServerProxy(f"{base_url}/xmlrpc/2/object", allow_none=True)
@@ -66,30 +62,22 @@ class OdooClient:
                 {},
             )
         except socket.gaierror as exc:
-            raise OdooConnectionError(
-                f"Unable to resolve Odoo host from ODOO_URL '{base_url}'."
-            ) from exc
+            raise OdooConnectionError(f"Unable to resolve Odoo host from ODOO_URL '{base_url}'.") from exc
         except TimeoutError as exc:
             raise OdooConnectionError("Timed out while connecting to Odoo XML-RPC endpoint.") from exc
         except ConnectionRefusedError as exc:
             raise OdooConnectionError("Connection refused by Odoo host/port.") from exc
         except ssl.SSLError as exc:
-            raise OdooConnectionError(
-                "SSL/TLS handshake failed for ODOO_URL. Check certificate/URL."
-            ) from exc
+            raise OdooConnectionError("SSL/TLS handshake failed for ODOO_URL. Check certificate/URL.") from exc
         except ProtocolError as exc:
-            raise OdooConnectionError(
-                f"Odoo XML-RPC protocol error ({exc.errcode}): {exc.errmsg}"
-            ) from exc
+            raise OdooConnectionError(f"Odoo XML-RPC protocol error ({exc.errcode}): {exc.errmsg}") from exc
         except OdooConnectionError:
             raise
         except Exception as exc:  # pragma: no cover - defensive network error mapping
             raise OdooConnectionError(f"Failed to connect to Odoo: {exc}") from exc
 
         if not uid:
-            raise OdooConnectionError(
-                "Odoo authentication failed. Check ODOO_DB, ODOO_USERNAME, and ODOO_PASSWORD."
-            )
+            raise OdooConnectionError("Odoo authentication failed. Check ODOO_DB, ODOO_USERNAME, and ODOO_PASSWORD.")
 
         self._uid = uid
         self._common = common
@@ -135,11 +123,7 @@ class OdooClient:
         except Fault as exc:
             message = str(exc)
             if "AccessError" in message:
-                raise OdooConnectionError(
-                    f"Odoo access denied for model '{model}'. Verify user permissions."
-                ) from exc
+                raise OdooConnectionError(f"Odoo access denied for model '{model}'. Verify user permissions.") from exc
             if "database" in message.lower() and "not exist" in message.lower():
-                raise OdooConnectionError(
-                    f"Odoo database '{self.settings.odoo_db}' was not found."
-                ) from exc
+                raise OdooConnectionError(f"Odoo database '{self.settings.odoo_db}' was not found.") from exc
             raise OdooConnectionError(f"Odoo XML-RPC fault calling {model}.{method}: {message}") from exc

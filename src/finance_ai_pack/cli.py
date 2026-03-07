@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import re
+from pathlib import Path
 
 from finance_ai_pack.config import Settings
 from finance_ai_pack.outputs.writers import write_csv, write_html, write_json, write_xlsx
@@ -134,8 +134,7 @@ def run_month_end(period: str, settings: Settings | None = None, tra_file: Path 
     unmatched_transactions = rollup["total_statement_lines"] - rollup["total_reconciled_lines"]
     unexplained_amount = float(sum(abs(b["tie_out"]["difference"]) for b in bank["banks"]))
     vat_monthly_differences = [
-        max(abs(float(row["input_difference"])), abs(float(row["output_difference"])))
-        for row in vat["monthly_summary"]
+        max(abs(float(row["input_difference"])), abs(float(row["output_difference"]))) for row in vat["monthly_summary"]
     ]
 
     status = evaluate(

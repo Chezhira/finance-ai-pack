@@ -1,10 +1,9 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
-
-import json
 
 from finance_ai_pack.config import Settings
 from finance_ai_pack.connectors.odoo.client import OdooClient

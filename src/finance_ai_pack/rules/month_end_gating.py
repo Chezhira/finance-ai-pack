@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-
 RED = "RED"
 AMBER = "AMBER"
 GREEN = "GREEN"
@@ -14,7 +13,11 @@ RULES_FILE = Path(__file__).resolve().parent / "gating_rules.yml"
 def _load_thresholds() -> dict:
     thresholds = {
         "green": {"max_unmatched_transactions": 0, "max_unexplained_amount": 0.0, "max_vat_monthly_difference": 0.0},
-        "amber": {"max_unmatched_transactions": 5, "max_unexplained_amount": 1000.0, "max_vat_monthly_difference": 250.0},
+        "amber": {
+            "max_unmatched_transactions": 5,
+            "max_unexplained_amount": 1000.0,
+            "max_vat_monthly_difference": 250.0,
+        },
     }
     if not RULES_FILE.exists():
         return thresholds
@@ -44,7 +47,9 @@ def _load_thresholds() -> dict:
     return thresholds
 
 
-def evaluate(unmatched_transactions: int, unexplained_amount: float, vat_monthly_differences: list[float] | None = None) -> str:
+def evaluate(
+    unmatched_transactions: int, unexplained_amount: float, vat_monthly_differences: list[float] | None = None
+) -> str:
     thresholds = _load_thresholds()
     amber = thresholds.get("amber", {})
     green = thresholds.get("green", {})

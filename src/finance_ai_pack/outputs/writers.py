@@ -68,14 +68,14 @@ def write_xlsx(rows: list[dict], output_file: Path) -> None:
             '<Default Extension="xml" ContentType="application/xml"/>'
             '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
             '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
-            '</Types>',
+            "</Types>",
         )
         zf.writestr(
             "_rels/.rels",
             '<?xml version="1.0" encoding="UTF-8"?>'
             '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
             '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
-            '</Relationships>',
+            "</Relationships>",
         )
         zf.writestr(
             "xl/workbook.xml",
@@ -83,13 +83,13 @@ def write_xlsx(rows: list[dict], output_file: Path) -> None:
             '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
             'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
             '<sheets><sheet name="BankRecon" sheetId="1" r:id="rId1"/></sheets>'
-            '</workbook>',
+            "</workbook>",
         )
         zf.writestr(
             "xl/_rels/workbook.xml.rels",
             '<?xml version="1.0" encoding="UTF-8"?>'
             '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
             '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
-            '</Relationships>',
+            "</Relationships>",
         )
         zf.writestr("xl/worksheets/sheet1.xml", sheet_xml)

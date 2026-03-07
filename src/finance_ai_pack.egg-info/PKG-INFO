@@ -1,0 +1,6 @@
+Metadata-Version: 2.4
+Name: finance-ai-pack
+Version: 0.1.0
+Summary: Finance AI Pack scaffold (fixture-first, Odoo 18-first)
+Requires-Python: >=3.11
+Requires-Dist: PyYAML>=6.0

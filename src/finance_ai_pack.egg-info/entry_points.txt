@@ -1,0 +1,2 @@
+[console_scripts]
+run = finance_ai_pack.cli:main

@@ -79,8 +79,12 @@ class FixturesAdapter:
         closing_balance = sum(float(row.get("vat_amount", 0.0)) for row in lines)
         return {
             "opening_balance": 0.0,
-            "debits": round(sum(float(r.get("vat_amount", 0.0)) for r in lines if float(r.get("vat_amount", 0.0)) < 0), 2),
-            "credits": round(sum(float(r.get("vat_amount", 0.0)) for r in lines if float(r.get("vat_amount", 0.0)) >= 0), 2),
+            "debits": round(
+                sum(float(r.get("vat_amount", 0.0)) for r in lines if float(r.get("vat_amount", 0.0)) < 0), 2
+            ),
+            "credits": round(
+                sum(float(r.get("vat_amount", 0.0)) for r in lines if float(r.get("vat_amount", 0.0)) >= 0), 2
+            ),
             "closing_balance": round(closing_balance, 2),
             "assumption": "Fixture tie-out approximates VAT control using summed VAT tax lines only.",
         }
